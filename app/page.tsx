@@ -1,9 +1,9 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 
 // Components
-
 import SideNavBar from "../components/SideNavBar";
 import SearchBar from "../components/SearchBar";
 import CategoryList from "../components/CategoryList";
@@ -13,58 +13,51 @@ import MapGoogle from "../components/MapGoogle";
 import PlaceInfoBox from "../components/PlaceInfoBox";
 
 // API service
-
 import GlobalApi from "../service/GlobalApi";
 
 // GPS function
-
 import { getUserLocation } from "./utils/getUserLocation";
+
+// User location type
+interface UserLocation {
+  lat: number;
+  lng: number;
+}
 
 export default function Home() {
   // Stores places from Google API
-
   const [places, setPlaces] = useState([]);
 
   // Current selected category
-
   const [selectedCategory, setSelectedCategory] = useState("gas_station");
 
   // User GPS location
-
-  const [userLocation, setUserLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
 
   // Loading state
-
   const [loading, setLoading] = useState(false);
 
   // Show favorites list
-
   const [showFavorites, setShowFavorites] = useState(false);
 
   // Get user location when app starts
-
   useEffect(() => {
     console.log("GETTING USER LOCATION");
 
     getUserLocation()
       .then((coords) => {
         console.log("USER LOCATION:", coords);
-
         setUserLocation(coords);
       })
-
       .catch((error) => {
         console.log("LOCATION ERROR:", error);
       });
   }, []);
 
   // Load nearby places
-
   const getNearByPlace = async (
     category: string,
-
     lat: number,
-
     lng: number,
   ) => {
     try {
@@ -74,61 +67,37 @@ export default function Home() {
 
       const response = await GlobalApi.getNearByPlace(
         category,
-
         lat,
-
         lng,
       );
 
-      console.log(
-        "PLACES RESULT:",
-
-        response.data,
-      );
+      console.log("PLACES RESULT:", response.data);
 
       setPlaces(response.data?.results || []);
     } catch (error) {
-      console.log(
-        "PLACES ERROR:",
-
-        error,
-      );
+      console.log("PLACES ERROR:", error);
     } finally {
       setLoading(false);
     }
   };
 
   // Text search
-
   const searchPlace = async (text: string) => {
     try {
       setLoading(true);
 
-      console.log(
-        "TEXT SEARCH:",
-
-        text,
-      );
+      console.log("TEXT SEARCH:", text);
 
       const response = await GlobalApi.searchPlace(text);
 
-      console.log(
-        "SEARCH RESULT:",
-
-        response.data,
-      );
+      console.log("SEARCH RESULT:", response.data);
 
       setPlaces(response.data?.results || []);
 
       // After search show normal list
-
       setShowFavorites(false);
     } catch (error) {
-      console.log(
-        "SEARCH ERROR:",
-
-        error,
-      );
+      console.log("SEARCH ERROR:", error);
     } finally {
       setLoading(false);
     }
@@ -137,19 +106,15 @@ export default function Home() {
   // Load places when:
   // - GPS ready
   // - category changes
-
   useEffect(() => {
     if (!userLocation) {
       console.log("WAITING FOR LOCATION");
-
       return;
     }
 
     getNearByPlace(
       selectedCategory,
-
       userLocation.lat,
-
       userLocation.lng,
     );
   }, [selectedCategory, userLocation]);
@@ -157,7 +122,6 @@ export default function Home() {
   return (
     <div className="flex">
       {/* Left navigation */}
-
       <SideNavBar setShowFavorites={setShowFavorites} />
 
       <div
@@ -173,38 +137,32 @@ export default function Home() {
         "
       >
         {/* LEFT SIDE */}
-
         <div>
           {/* Search */}
-
           <SearchBar onSearch={searchPlace} />
 
           {showFavorites ? (
             // Favorites list
-
             <FavoriteList />
           ) : (
             <>
               {/* Categories */}
-
               <CategoryList setSelectedCategory={setSelectedCategory} />
 
               {/* Places list */}
-
               <BusinessList places={places} loading={loading} />
             </>
           )}
         </div>
 
         {/* RIGHT SIDE */}
-
         <div>
           <h2
             className="
-            text-xl
-            font-bold
-            mb-4
-          "
+              text-xl
+              font-bold
+              mb-4
+            "
           >
             Map Area
           </h2>
