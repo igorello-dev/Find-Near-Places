@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext } from "react";
@@ -5,51 +6,38 @@ import { useContext } from "react";
 import { SelectedBusinessContext } from "../app/context/SelectedBusinessContext";
 
 export default function PlaceInfoBox({ userLocation }) {
-  // Get selected business from global context
+  const { selectedBusiness } = useContext(
+    SelectedBusinessContext
+  );
 
-  const { selectedBusiness } = useContext(SelectedBusinessContext);
+  if (!selectedBusiness || !userLocation) {
+    return null;
+  }
 
-  // Wait until user location and selected place are available
+  // Get coordinates from Places API (New)
+  const placeLat = Number(selectedBusiness.location?.latitude);
+  const placeLng = Number(selectedBusiness.location?.longitude);
 
   if (
-    !selectedBusiness ||
-    !userLocation ||
-    !selectedBusiness.geometry ||
-    !selectedBusiness.geometry.location
+    !Number.isFinite(placeLat) ||
+    !Number.isFinite(placeLng)
   ) {
     return null;
   }
 
-  // Selected place coordinates
-
-  const placeLat = Number(selectedBusiness.geometry.location.lat);
-
-  const placeLng = Number(selectedBusiness.geometry.location.lng);
-
-  // Calculate distance between user and selected place
-
+  // Calculate distance
   const distance = calculateDistance(
     userLocation.lat,
-
     userLocation.lng,
-
     placeLat,
-
-    placeLng,
+    placeLng
   );
 
-  // Open Google Maps route
-
+  // Open Google Maps directions
   const openRoute = () => {
-    const url = `https://www.google.com/maps/dir/${userLocation.lat},${
-      userLocation.lng
-    }/${placeLat},${placeLng}`;
+    const url = `https://www.google.com/maps/dir/${userLocation.lat},${userLocation.lng}/${placeLat},${placeLng}`;
 
-    window.open(
-      url,
-
-      "_blank",
-    );
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -63,28 +51,27 @@ export default function PlaceInfoBox({ userLocation }) {
         shadow-lg
       "
     >
-      {/* Business name */}
+      <h2 className="text-xl font-bold">
+        {selectedBusiness.displayName?.text || "Selected place"}
+      </h2>
 
-      <h2 className="text-xl font-bold">{selectedBusiness.name}</h2>
-
-      {/* Business address */}
-
-      <p className="mt-2 text-gray-600">{selectedBusiness.vicinity}</p>
-
-      {/* Rating */}
+      <p className="mt-2 text-gray-600">
+        {selectedBusiness.formattedAddress || "Address unavailable"}
+      </p>
 
       {selectedBusiness.rating && (
-        <p className="mt-2">⭐ {selectedBusiness.rating}</p>
+        <p className="mt-2">
+          ⭐ {selectedBusiness.rating}
+          {selectedBusiness.userRatingCount
+            ? ` (${selectedBusiness.userRatingCount} reviews)`
+            : ""}
+        </p>
       )}
-
-      {/* Distance information */}
 
       <p className="mt-2">
         📍 Distance:
         <strong> {distance.toFixed(2)} km</strong>
       </p>
-
-      {/* Open route button */}
 
       <button
         onClick={openRoute}
@@ -104,21 +91,9 @@ export default function PlaceInfoBox({ userLocation }) {
   );
 }
 
-// Calculate distance between two GPS coordinates
-
-// Uses the Haversine formula
-
-function calculateDistance(
-  lat1,
-  lon1,
-  lat2,
-  lon2,
-) {
-  // Earth radius in kilometers
-
+// Calculate distance using the Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
-
-  // Convert degrees to radians
 
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -126,17 +101,15 @@ function calculateDistance(
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLon / 2) ** 2;
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
 
   const c =
     2 *
     Math.atan2(
       Math.sqrt(a),
-      Math.sqrt(1 - a),
+      Math.sqrt(1 - a)
     );
-
-  // Return distance in kilometers
 
   return R * c;
 }

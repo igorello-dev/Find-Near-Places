@@ -13,166 +13,134 @@ import UserLocationMarker from "./Marker";
 
 import { SelectedBusinessContext } from "../app/context/SelectedBusinessContext";
 
-// Google Map component
-// Shows:
-// 1. User GPS location
-// 2. Nearby places markers
-// 3. Selected place information
-// 4. My Location button
-
-export default function MapGoogle({
-  userLocation,
-
-  places,
-
-  selectedCategory,
-}) {
-  // Store Google Map instance
-  // We need it to move the map later
-
+export default function MapGoogle({ userLocation, places, selectedCategory }) {
   const [map, setMap] = useState(null);
 
-  // Selected business from context
+  const { selectedBusiness, setSelectedBusiness } = useContext(
+    SelectedBusinessContext,
+  );
 
-  const {
-    selectedBusiness,
-
-    setSelectedBusiness,
-  } = useContext(SelectedBusinessContext);
-
-  // Return marker icon depending on category
-
+  // Select marker icon
   const getMarkerIcon = () => {
     switch (selectedCategory) {
       case "gas_station":
         return "/petrol-station.png";
-
       case "restaurant":
         return "/restaurant.png";
-
       case "hotel":
         return "/hotel.png";
-
       default:
         return "/placeholder.png";
     }
   };
 
-  // Move camera back to user's GPS position
+  // Get coordinates from Places API (New)
+  const getPlacePosition = (place) => {
+    if (
+      !place?.location ||
+      place.location.latitude == null ||
+      place.location.longitude == null
+    ) {
+      return null;
+    }
 
+    return {
+      lat: Number(place.location.latitude),
+      lng: Number(place.location.longitude),
+    };
+  };
+
+  // Return to user's location
   const goToMyLocation = () => {
     if (map && userLocation) {
       map.panTo(userLocation);
-
       map.setZoom(15);
     }
   };
+
+  const selectedPosition = getPlacePosition(selectedBusiness);
 
   return (
     <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_API_KEY}>
       {userLocation && (
         <div className="relative">
           <GoogleMap
-            // Map size
-
             mapContainerStyle={{
               width: "100%",
-
               height: "400px",
-
               borderRadius: "20px",
             }}
-            // Initial map center
-
             center={userLocation}
             zoom={14}
-            // Save map object
-
-            onLoad={(map) => {
-              setMap(map);
+            onLoad={(mapInstance) => {
+              setMap(mapInstance);
             }}
           >
-            {/* User current location marker */}
-
+            {/* User GPS location */}
             <UserLocationMarker userLocation={userLocation} />
 
-            {/* Nearby places markers */}
+            {/* Nearby places */}
+            {places?.map((place) => {
+              const position = getPlacePosition(place);
 
-            {places?.map((place, index) => (
-              <MarkerF
-                key={index}
-                position={{
-                  lat: Number(place.geometry.location.lat),
+              if (!position) return null;
 
-                  lng: Number(place.geometry.location.lng),
-                }}
-                // Category icon
+              return (
+                <MarkerF
+                  key={place.id}
+                  position={position}
+                  icon={{
+                    url: getMarkerIcon(),
+                    scaledSize: new window.google.maps.Size(40, 40),
+                  }}
+                  onClick={() => {
+                    setSelectedBusiness(place);
+                  }}
+                />
+              );
+            })}
 
-                icon={{
-                  url: getMarkerIcon(),
-
-                  scaledSize: new window.google.maps.Size(
-                    40,
-
-                    40,
-                  ),
-                }}
-                // Select place
-
-                onClick={() => {
-                  setSelectedBusiness(place);
-                }}
-              />
-            ))}
-
-            {/* Information window above marker */}
-
-            {selectedBusiness && (
+            {/* Selected place information */}
+            {selectedBusiness && selectedPosition && (
               <InfoWindow
-                position={{
-                  lat: Number(selectedBusiness.geometry.location.lat),
-                  lng: Number(selectedBusiness.geometry.location.lng),
-                }}
+                position={selectedPosition}
                 onCloseClick={() => {
                   setSelectedBusiness(null);
                 }}
               >
                 <div>
-                  <h3 className="font-bold">{selectedBusiness.name}</h3>
-                  <p>{selectedBusiness.vicinity}</p>
+                  <h3 className="font-bold">
+                    {selectedBusiness.displayName?.text || "Selected place"}
+                  </h3>
+
+                  <p>
+                    {selectedBusiness.formattedAddress || "Address unavailable"}
+                  </p>
                 </div>
               </InfoWindow>
             )}
           </GoogleMap>
 
-          {/* 
-          Button:
-          Return map to user's location
-
-          Position:
-          Bottom Left
-        */}
-
+          {/* Return to my location button */}
           <button
             onClick={goToMyLocation}
             className="
-            absolute
-            left-4
-            bottom-4
-            bg-white
-            shadow-lg
-            rounded-full
-            w-12
-            h-12
-            flex
-            items-center
-            justify-center
-            hover:bg-purple-100
-            transition
-          "
+              absolute
+              left-4
+              bottom-4
+              bg-white
+              shadow-lg
+              rounded-full
+              w-12
+              h-12
+              flex
+              items-center
+              justify-center
+              hover:bg-purple-100
+              transition
+            "
+            aria-label="Go to my location"
           >
-            {/* GPS SVG icon */}
-
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"

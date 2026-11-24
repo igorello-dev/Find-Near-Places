@@ -1,259 +1,144 @@
+
 "use client";
 
 import { useState, useEffect, useContext } from "react";
 
 import { SelectedBusinessContext } from "../app/context/SelectedBusinessContext";
-
 import { FavoriteContext } from "../app/context/FavoriteContext";
 
-// Business list component
-// Shows places from Google Places API
-// Features:
-// - Pagination
-// - Select place
-// - Highlight selected place
-// - Favorites
-
 export default function BusinessList({ places, loading }) {
-  // Current page number
   const [page, setPage] = useState(0);
 
-  // Selected place context
-  const { selectedBusiness, setSelectedBusiness } = useContext(
-    SelectedBusinessContext,
-  );
+  const { selectedBusiness, setSelectedBusiness } =
+    useContext(SelectedBusinessContext);
 
-  // Favorites context
   const { addFavorite, removeFavorite, favorites } =
     useContext(FavoriteContext);
 
-  // Number of items per page
   const pageSize = 5;
 
-  // Reset page after new search
   useEffect(() => {
     setPage(0);
   }, [places]);
 
-  // Pagination calculation
   const start = page * pageSize;
   const visiblePlaces = places.slice(start, start + pageSize);
+
   const showPrev = page > 0;
   const showNext = start + pageSize < places.length;
 
-  // Check favorite
-  const isFavorite = (place) => {
-    return favorites.some((item) => item.place_id === place.place_id);
-  };
-
-  // Loading animation
+  const isFavorite = (place) =>
+    favorites.some((item) => item.id === place.id);
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3, 4, 5].map((item) => (
+      <div className="mt-5 space-y-4">
+        {[1, 2, 3].map((item) => (
           <div
             key={item}
-            className="
-              flex
-              gap-3
-              p-3
-              border
-              rounded-xl
-              animate-pulse
-            "
-          >
-            <div
-              className="
-                w-20
-                h-20
-                bg-gray-300
-                rounded-lg
-              "
-            />
-
-            <div className="flex-1 space-y-3">
-              <div
-                className="
-                  h-4
-                  bg-gray-300
-                  rounded
-                  w-3/4
-                "
-              />
-
-              <div
-                className="
-                  h-3
-                  bg-gray-300
-                  rounded
-                "
-              />
-            </div>
-          </div>
+            className="h-24 rounded-xl bg-gray-200 animate-pulse"
+          />
         ))}
       </div>
     );
   }
-
-  // No places
 
   if (!places || places.length === 0) {
     return <p className="mt-5 text-gray-500">No places found</p>;
   }
 
   return (
-    <div className="relative mt-5">
-      {/* Previous button */}
+    <div className="mt-5 space-y-3">
+      {visiblePlaces.map((place) => {
+        const favorite = isFavorite(place);
+        const selected = selectedBusiness?.id === place.id;
+        const photoName = place.photos?.[0]?.name;
 
-      {showPrev && (
-        <button
-          onClick={() => {
-            setPage(page - 1);
-          }}
-          className="
-              absolute
-              -left-12
-              top-1/2
-              -translate-y-1/2
-              w-9
-              h-9
-              rounded-full
-              bg-white
-              shadow-md
-              z-10
-            "
-        >
-          ◀
-        </button>
-      )}
+        const photoUrl = photoName
+          ? `/api/photo?name=${encodeURIComponent(photoName)}`
+          : "/businessItem.jpg";
 
-      {/* Places list */}
-
-      <div className="space-y-3">
-        {visiblePlaces.map((place, index) => (
+        return (
           <div
-            key={place.place_id || index}
-            // Select business
-
-            onClick={() => {
-              setSelectedBusiness(place);
-            }}
-            // Active selected style
-
-            className={`
-
-                flex
-
-                gap-4
-
-                p-3
-
-                border
-
-                rounded-xl
-
-                cursor-pointer
-
-                transition-all
-
-                duration-300
-
-
-                ${
-                  selectedBusiness?.place_id === place.place_id
-                    ? `
-                    border-purple-500
-                    bg-purple-100
-                    shadow-xl
-                    scale-[1.02]
-                  `
-                    : `
-                    bg-white
-                    hover:shadow-lg
-                  `
-                }
-
-              `}
+            key={place.id}
+            onClick={() => setSelectedBusiness(place)}
+            className={`flex gap-3 p-3 border rounded-xl cursor-pointer transition ${
+              selected
+                ? "border-purple-500 bg-purple-50"
+                : "hover:bg-purple-50"
+            }`}
           >
-            {/* Place image */}
-
             <img
-              src={
-                place.photos?.length
-                  ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=200&photoreference=${place.photos[0].photo_reference}&key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}`
-                  : "/placeholder.png"
-              }
-              alt={place.name}
-              className="
-                  w-20
-                  h-20
-                  rounded-lg
-                  object-cover
-                "
+              src={photoUrl}
+              alt={place.displayName?.text || "Place"}
+              className="w-20 h-20 shrink-0 rounded-lg object-cover"
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = "/businessItem.jpg";
+              }}
             />
 
-            {/* Place information */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold">
+                {place.displayName?.text || "Unnamed place"}
+              </h3>
 
-            <div className="flex-1">
-              <div className="flex justify-between">
-                <h3 className="font-bold">{place.name}</h3>
+              <p className="text-sm text-gray-500">
+                {place.formattedAddress || "Address unavailable"}
+              </p>
 
-                {/* Favorite button */}
-
-                <button
-                  onClick={(e) => {
-                    // Prevent card click
-
-                    e.stopPropagation();
-
-                    if (isFavorite(place)) {
-                      removeFavorite(place.place_id);
-                    } else {
-                      addFavorite(place);
-                    }
-                  }}
-                  className="text-2xl"
-                >
-                  {isFavorite(place) ? "❤️" : "🤍"}
-                </button>
-              </div>
-
-              {/* Address */}
-
-              <p className="text-sm text-gray-600">{place.vicinity}</p>
-
-              {/* Rating */}
-
-              {place.rating && <p className="mt-1">⭐ {place.rating}</p>}
+              {place.rating && (
+                <p className="mt-1 text-sm">
+                  ⭐ {place.rating}
+                  {place.userRatingCount
+                    ? ` (${place.userRatingCount})`
+                    : ""}
+                </p>
+              )}
             </div>
+
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+
+                favorite
+                  ? removeFavorite(place.id)
+                  : addFavorite(place);
+              }}
+              className="text-xl self-start"
+              aria-label={
+                favorite
+                  ? "Remove from favorites"
+                  : "Add to favorites"
+              }
+            >
+              {favorite ? "❤️" : "🤍"}
+            </button>
           </div>
-        ))}
-      </div>
+        );
+      })}
 
-      {/* Next button */}
-
-      {showNext && (
+      <div className="flex justify-between items-center pt-3">
         <button
-          onClick={() => {
-            setPage(page + 1);
-          }}
-          className="
-              absolute
-              -right-12
-              top-1/2
-              -translate-y-1/2
-              w-9
-              h-9
-              rounded-full
-              bg-white
-              shadow-md
-              z-10
-            "
+          onClick={() => setPage((prev) => prev - 1)}
+          disabled={!showPrev}
+          className="px-4 py-2 rounded-lg border disabled:opacity-30"
         >
-          ▶
+          Previous
         </button>
-      )}
+
+        <span className="text-sm text-gray-500">
+          Page {page + 1} of {Math.ceil(places.length / pageSize)}
+        </span>
+
+        <button
+          onClick={() => setPage((prev) => prev + 1)}
+          disabled={!showNext}
+          className="px-4 py-2 rounded-lg border disabled:opacity-30"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }

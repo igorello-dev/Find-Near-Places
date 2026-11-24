@@ -1,43 +1,45 @@
+
 "use client";
 
 import { createContext, useEffect, useState } from "react";
 
-// Create Favorite Context
-
 export const FavoriteContext = createContext();
 
 export function FavoriteProvider({ children }) {
-  // Store favorite places
-
   const [favorites, setFavorites] = useState([]);
 
-  // Load favorites when app starts
-
+  // Load favorites from localStorage
   useEffect(() => {
-    const savedFavorites = localStorage.getItem("favorites");
+    try {
+      const savedFavorites = localStorage.getItem("favorites");
 
-    if (savedFavorites) {
-      setFavorites(JSON.parse(savedFavorites));
+      if (savedFavorites) {
+        const parsedFavorites = JSON.parse(savedFavorites);
+
+        // Support old and new Google Places IDs
+        const normalizedFavorites = parsedFavorites.map((place) => ({
+          ...place,
+          id: place.id || place.place_id,
+        }));
+
+        setFavorites(normalizedFavorites);
+      }
+    } catch (error) {
+      console.error("FAVORITES LOAD ERROR:", error);
     }
   }, []);
 
-  // Save favorites every time list changes
-
+  // Save favorites
   useEffect(() => {
-    localStorage.setItem(
-      "favorites",
-
-      JSON.stringify(favorites),
-    );
+    localStorage.setItem("favorites", JSON.stringify(favorites));
   }, [favorites]);
 
-  // Add place to favorites
-
+  // Add favorite
   const addFavorite = (place) => {
     setFavorites((prev) => {
-      const exists = prev.find((item) => item.place_id === place.place_id);
-
-      // Prevent duplicates
+      const exists = prev.some(
+        (item) => item.id === place.id
+      );
 
       if (exists) {
         return prev;
@@ -47,19 +49,18 @@ export function FavoriteProvider({ children }) {
     });
   };
 
-  // Remove place from favorites
-
-  const removeFavorite = (place_id) => {
-    setFavorites((prev) => prev.filter((item) => item.place_id !== place_id));
+  // Remove favorite
+  const removeFavorite = (placeId) => {
+    setFavorites((prev) =>
+      prev.filter((item) => item.id !== placeId)
+    );
   };
 
   return (
     <FavoriteContext.Provider
       value={{
         favorites,
-
         addFavorite,
-
         removeFavorite,
       }}
     >

@@ -1,17 +1,13 @@
+
 "use client";
 
 import { useContext } from "react";
 
 import { FavoriteContext } from "../app/context/FavoriteContext";
-
 import { SelectedBusinessContext } from "../app/context/SelectedBusinessContext";
 
-// Favorite places list
-// Shows all saved places
-
 export default function FavoriteList() {
-  const { favorites } = useContext(FavoriteContext);
-
+  const { favorites, removeFavorite } = useContext(FavoriteContext);
   const { setSelectedBusiness } = useContext(SelectedBusinessContext);
 
   if (favorites.length === 0) {
@@ -24,40 +20,39 @@ export default function FavoriteList() {
 
       {favorites.map((place) => (
         <div
-          key={place.place_id}
-          onClick={() => {
-            setSelectedBusiness(place);
-          }}
-          className="
-              flex
-              gap-3
-              p-3
-              border
-              rounded-xl
-              cursor-pointer
-              hover:bg-purple-100
-              transition
-            "
+          key={place.id}
+          onClick={() => setSelectedBusiness(place)}
+          className="flex gap-3 p-3 border rounded-xl cursor-pointer hover:bg-purple-100 transition"
         >
           <img
             src={
-              place.photos?.length
-                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=100&photoreference=${place.photos[0].photo_reference}&key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}`
-                : "/placeholder.png"
+              place.photos?.[0]?.name
+                ? `/api/photo?name=${encodeURIComponent(place.photos[0].name)}`
+                : "/businessItem.jpg"
             }
-            className="
-                w-16
-                h-16
-                rounded-lg
-                object-cover
-              "
+            alt={place.displayName?.text || "Place"}
+            className="w-16 h-16 rounded-lg object-cover"
           />
 
-          <div>
-            <h3 className="font-bold">{place.name}</h3>
-
-            <p className="text-sm text-gray-500">{place.vicinity}</p>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold">
+              {place.displayName?.text || "Unnamed place"}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {place.formattedAddress || "Address unavailable"}
+            </p>
           </div>
+
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              removeFavorite(place.id);
+            }}
+            className="self-start text-xl"
+            aria-label="Remove from favorites"
+          >
+            ❌
+          </button>
         </div>
       ))}
     </div>

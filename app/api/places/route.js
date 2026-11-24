@@ -1,90 +1,73 @@
-import axios from "axios";
 
-// Google Places Nearby Search API URL
+import { NextResponse } from "next/server";
 
-const BASE_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
+const GOOGLE_API_URL =
+  "https://places.googleapis.com/v1/places:searchNearby";
 
-// API route:
-// /api/places
-//
-// Receives:
-// category
-// lat
-// lng
-//
-// Returns nearby places from Google
-
-export async function GET(req) {
+export async function GET(request) {
   try {
-    console.log("PLACES API HIT");
-
-    // Get parameters from URL
-
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
 
     const category = searchParams.get("category");
-
     const lat = searchParams.get("lat");
-
     const lng = searchParams.get("lng");
 
-    console.log("REQUEST:", category, lat, lng);
-
-    // Google uses "lodging"
-    // instead of "hotel"
-
-    let placeType = category;
-
-    if (category === "hotel") {
-      placeType = "lodging";
+    if (!category || !lat || !lng) {
+      return NextResponse.json(
+        { error: "Missing category, lat or lng" },
+        { status: 400 }
+      );
     }
 
-    // Call Google Places API
-
-    const response = await axios.get(
-      BASE_URL,
-
-      {
-        params: {
-          type: placeType,
-
-          location: `${lat},${lng}`,
-
-          radius: 5000,
-
-          key: process.env.GOOGLE_API_KEY,
-        },
+    const response = await fetch(GOOGLE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": process.env.GOOGLE_API_KEY,
+        "X-Goog-FieldMask": [
+          "places.id",
+          "places.displayName",
+          "places.formattedAddress",
+          "places.location",
+          "places.rating",
+          "places.userRatingCount",
+          "places.types",
+          "places.photos"
+        ].join(",")
       },
-    );
+      body: JSON.stringify({
+        includedTypes: [category],
+        maxResultCount: 20,
+        locationRestriction: {
+          circle: {
+            center: {
+              latitude: Number(lat),
+              longitude: Number(lng)
+            },
+            radius: 5000
+          }
+        }
+      })
+    });
 
-    console.log(
-      "GOOGLE STATUS:",
+    const data = await response.json();
 
-      response.data.status,
-    );
+    if (!response.ok) {
+      console.error("GOOGLE NEARBY ERROR:", data);
 
-    console.log(
-      "FOUND:",
+      return NextResponse.json(
+        { error: "Google Places API error", details: data },
+        { status: response.status }
+      );
+    }
 
-      response.data.results.length,
-    );
-
-    return Response.json(response.data);
+    return NextResponse.json(data);
   } catch (error) {
-    console.log(
-      "PLACES ERROR:",
+    console.error("PLACES API ERROR:", error);
 
-      error.response?.data || error.message,
-    );
-
-    return Response.json(
-      {
-        error: "Failed to get places",
-      },
-
-      {
-        status: 500,
-      },
+    return NextResponse.json(
+      { error: "Failed to get places" },
+      { status: 500 }
     );
   }
 }
