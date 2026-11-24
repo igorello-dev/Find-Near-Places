@@ -16,7 +16,7 @@ import { getUserLocation } from "./utils/getUserLocation";
 export default function Home() {
   const [places, setPlaces] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("gas_station");
-  const [userLocation, setUserLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
 
@@ -33,7 +33,7 @@ export default function Home() {
   }, []);
 
   // Search nearby places
-  const getNearByPlace = async (category, lat, lng) => {
+  const getNearByPlace = async (category: string, lat: number, lng: number) => {
     try {
       setLoading(true);
 
@@ -53,7 +53,7 @@ export default function Home() {
   };
 
   // Search places by text
-  const searchPlace = async (text) => {
+  const searchPlace = async (text: string) => {
     try {
       setLoading(true);
 
