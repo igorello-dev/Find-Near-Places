@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
 import {
   GoogleMap,
@@ -17,7 +17,6 @@ import { SelectedBusinessContext } from "../app/context/SelectedBusinessContext"
 export default function MapGoogle({
   userLocation,
   places = [],
-  selectedCategory,
 }) {
   const [map, setMap] = useState(null);
 
@@ -25,24 +24,15 @@ export default function MapGoogle({
     SelectedBusinessContext
   );
 
-  // Select marker icon
-  const getMarkerIcon = () => {
-    switch (selectedCategory) {
-      case "gas_station":
-        return "/petrol-station.png";
-      case "restaurant":
-        return "/restaurant.png";
-      case "hotel":
-        return "/hotel.png";
-      default:
-        return "/placeholder.png";
-    }
-  };
-
   // Get coordinates from Google Places API
   const getPlacePosition = (place) => {
-    const latitude = Number(place?.location?.latitude);
-    const longitude = Number(place?.location?.longitude);
+    const lat = place?.location?.latitude;
+    const lng = place?.location?.longitude;
+
+    if (lat == null || lng == null) return null;
+
+    const latitude = Number(lat);
+    const longitude = Number(lng);
 
     if (
       !Number.isFinite(latitude) ||
@@ -60,6 +50,30 @@ export default function MapGoogle({
       lng: longitude,
     };
   };
+
+  // Automatically adjust map to show all places
+  useEffect(() => {
+    if (!map || !window.google || places.length === 0) return;
+
+    const bounds = new window.google.maps.LatLngBounds();
+    let validPlaces = 0;
+
+    places.forEach((place) => {
+      const position = getPlacePosition(place);
+
+      if (position) {
+        bounds.extend(position);
+        validPlaces++;
+      }
+    });
+
+    if (validPlaces === 1) {
+      map.panTo(bounds.getCenter());
+      map.setZoom(15);
+    } else if (validPlaces > 1) {
+      map.fitBounds(bounds);
+    }
+  }, [map, places]);
 
   // Return to user's location
   const goToMyLocation = () => {
@@ -85,17 +99,13 @@ export default function MapGoogle({
             }}
             center={userLocation}
             zoom={14}
-            onLoad={(mapInstance) => {
-              setMap(mapInstance);
-            }}
-            onUnmount={() => {
-              setMap(null);
-            }}
+            onLoad={setMap}
+            onUnmount={() => setMap(null)}
           >
             {/* User GPS location */}
             <UserLocationMarker userLocation={userLocation} />
 
-            {/* Nearby places */}
+            {/* Place markers */}
             {places.map((place) => {
               const position = getPlacePosition(place);
 
@@ -105,13 +115,7 @@ export default function MapGoogle({
                 <MarkerF
                   key={place.id}
                   position={position}
-                  icon={{
-                    url: getMarkerIcon(),
-                    scaledSize: new window.google.maps.Size(40, 40),
-                  }}
-                  onClick={() => {
-                    setSelectedBusiness(place);
-                  }}
+                  onClick={() => setSelectedBusiness(place)}
                 />
               );
             })}
@@ -120,9 +124,7 @@ export default function MapGoogle({
             {selectedBusiness && selectedPosition && (
               <InfoWindow
                 position={selectedPosition}
-                onCloseClick={() => {
-                  setSelectedBusiness(null);
-                }}
+                onCloseClick={() => setSelectedBusiness(null)}
               >
                 <div>
                   <h3 className="font-bold">
@@ -138,25 +140,11 @@ export default function MapGoogle({
             )}
           </GoogleMap>
 
-          {/* Return to my location button */}
+          {/* Return to user's location button */}
           <button
             type="button"
             onClick={goToMyLocation}
-            className="
-              absolute
-              left-4
-              bottom-4
-              bg-white
-              shadow-lg
-              rounded-full
-              w-12
-              h-12
-              flex
-              items-center
-              justify-center
-              hover:bg-purple-100
-              transition
-            "
+            className="absolute left-4 bottom-4 bg-white shadow-lg rounded-full w-12 h-12 flex items-center justify-center hover:bg-purple-100 transition"
             aria-label="Go to my location"
           >
             <svg
@@ -170,16 +158,7 @@ export default function MapGoogle({
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="
-                  M12 21
-                  a9 9 0 1 0 0 -18
-                  a9 9 0 0 0 0 18
-                  z
-                  M12 15
-                  a3 3 0 1 0 0 -6
-                  a3 3 0 0 0 0 6
-                  z
-                "
+                d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
               />
             </svg>
           </button>
