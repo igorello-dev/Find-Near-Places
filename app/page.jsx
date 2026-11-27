@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import SideNavBar from "../components/SideNavBar";
 import SearchBar from "../components/SearchBar";
@@ -21,6 +21,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
 
+  // Track the latest request to prevent old responses from replacing new results
+  const requestId = useRef(0);
+
   // Get user's GPS location
   useEffect(() => {
     getUserLocation()
@@ -35,6 +38,8 @@ export default function Home() {
 
   // Search nearby places by category
   const getNearByPlace = async (category, lat, lng) => {
+    const currentRequestId = ++requestId.current;
+
     try {
       setLoading(true);
 
@@ -42,14 +47,21 @@ export default function Home() {
 
       const response = await GlobalApi.getNearByPlace(category, lat, lng);
 
+      // Ignore outdated responses
+      if (currentRequestId !== requestId.current) return;
+
       console.log("PLACES RESULT:", response.data);
 
       setPlaces(response.data?.places || []);
     } catch (error) {
+      if (currentRequestId !== requestId.current) return;
+
       console.error("PLACES ERROR:", error);
       setPlaces([]);
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestId.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -60,9 +72,9 @@ export default function Home() {
       return;
     }
 
-    if (!text || !text.trim()) {
-      return;
-    }
+    if (!text || !text.trim()) return;
+
+    const currentRequestId = ++requestId.current;
 
     try {
       setLoading(true);
@@ -77,14 +89,21 @@ export default function Home() {
         userLocation.lng
       );
 
+      // Ignore outdated responses
+      if (currentRequestId !== requestId.current) return;
+
       console.log("SEARCH RESULT:", response.data);
 
       setPlaces(response.data?.places || []);
     } catch (error) {
+      if (currentRequestId !== requestId.current) return;
+
       console.error("SEARCH ERROR:", error);
       setPlaces([]);
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestId.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -131,7 +150,6 @@ export default function Home() {
           <MapGoogle
             userLocation={userLocation}
             places={places}
-            selectedCategory={selectedCategory}
           />
 
           <PlaceInfoBox userLocation={userLocation} />
