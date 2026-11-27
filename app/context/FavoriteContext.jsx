@@ -3,10 +3,11 @@
 
 import { createContext, useEffect, useState } from "react";
 
-export const FavoriteContext = createContext();
+export const FavoriteContext = createContext(null);
 
 export function FavoriteProvider({ children }) {
   const [favorites, setFavorites] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load favorites from localStorage
   useEffect(() => {
@@ -16,36 +17,56 @@ export function FavoriteProvider({ children }) {
       if (savedFavorites) {
         const parsedFavorites = JSON.parse(savedFavorites);
 
-        // Support old and new Google Places IDs
-        const normalizedFavorites = parsedFavorites.map((place) => ({
-          ...place,
-          id: place.id || place.place_id,
-        }));
+        if (Array.isArray(parsedFavorites)) {
+          const normalizedFavorites = parsedFavorites
+            .filter((place) => place && typeof place === "object")
+            .map((place) => ({
+              ...place,
+              id: place.id || place.place_id,
+            }))
+            .filter((place) => place.id);
 
-        setFavorites(normalizedFavorites);
+          setFavorites(normalizedFavorites);
+        }
       }
     } catch (error) {
       console.error("FAVORITES LOAD ERROR:", error);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
 
-  // Save favorites
+  // Save favorites to localStorage
   useEffect(() => {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-  }, [favorites]);
+    if (!isLoaded) return;
+
+    try {
+      localStorage.setItem(
+        "favorites",
+        JSON.stringify(favorites)
+      );
+    } catch (error) {
+      console.error("FAVORITES SAVE ERROR:", error);
+    }
+  }, [favorites, isLoaded]);
 
   // Add favorite
   const addFavorite = (place) => {
+    if (!place || !(place.id || place.place_id)) return;
+
+    const normalizedPlace = {
+      ...place,
+      id: place.id || place.place_id,
+    };
+
     setFavorites((prev) => {
       const exists = prev.some(
-        (item) => item.id === place.id
+        (item) => item.id === normalizedPlace.id
       );
 
-      if (exists) {
-        return prev;
-      }
+      if (exists) return prev;
 
-      return [...prev, place];
+      return [...prev, normalizedPlace];
     });
   };
 

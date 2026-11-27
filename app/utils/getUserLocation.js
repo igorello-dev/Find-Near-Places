@@ -1,65 +1,52 @@
-// Get current user GPS location
 
+"use client";
+
+// Get current user GPS location
 export const getUserLocation = () => {
   return new Promise((resolve, reject) => {
-    // Check if browser supports geolocation
-
+    // Check browser geolocation support
     if (!navigator.geolocation) {
-      reject("Geolocation is not supported by this browser");
-
+      reject(new Error("Geolocation is not supported by this browser"));
       return;
     }
 
-    // Request current position from device
-
+    // Request current position
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // Return latitude and longitude
-
-        resolve({
+        const coords = {
           lat: position.coords.latitude,
-
           lng: position.coords.longitude,
-        });
+        };
+
+        console.log("GPS COORDINATES:", coords);
+
+        resolve(coords);
       },
 
       (error) => {
-        // Handle GPS errors
-
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            reject("User denied location permission");
-
+            reject(new Error("User denied location permission"));
             break;
 
           case error.POSITION_UNAVAILABLE:
-            reject("Location information unavailable");
-
+            reject(new Error("Location information unavailable"));
             break;
 
           case error.TIMEOUT:
-            reject("Location request timed out");
-
+            reject(new Error("Location request timed out"));
             break;
 
           default:
-            reject("Unknown location error");
+            reject(new Error("Unknown location error"));
         }
       },
 
       {
-        // Use GPS with better accuracy
-
         enableHighAccuracy: true,
-
-        // Wait maximum 10 seconds
-
-        timeout: 10000,
-
-        // Use cached location for 5 minutes
-
-        maximumAge: 300000,
-      },
+        timeout: 15000,
+        maximumAge: 0,
+      }
     );
   });
 };

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,7 +17,7 @@ import { getUserLocation } from "./utils/getUserLocation";
 export default function Home() {
   const [places, setPlaces] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("gas_station");
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
 
@@ -32,8 +33,8 @@ export default function Home() {
       });
   }, []);
 
-  // Search nearby places
-  const getNearByPlace = async (category: string, lat: number, lng: number) => {
+  // Search nearby places by category
+  const getNearByPlace = async (category, lat, lng) => {
     try {
       setLoading(true);
 
@@ -52,19 +53,33 @@ export default function Home() {
     }
   };
 
-  // Search places by text
-  const searchPlace = async (text: string) => {
+  // Search places by text near the user's GPS location
+  const searchPlace = async (text) => {
+    if (!userLocation) {
+      console.error("GPS location is not available yet");
+      return;
+    }
+
+    if (!text || !text.trim()) {
+      return;
+    }
+
     try {
       setLoading(true);
+      setShowFavorites(false);
 
       console.log("TEXT SEARCH:", text);
+      console.log("SEARCH LOCATION:", userLocation);
 
-      const response = await GlobalApi.searchPlace(text);
+      const response = await GlobalApi.searchPlace(
+        text.trim(),
+        userLocation.lat,
+        userLocation.lng
+      );
 
       console.log("SEARCH RESULT:", response.data);
 
       setPlaces(response.data?.places || []);
-      setShowFavorites(false);
     } catch (error) {
       console.error("SEARCH ERROR:", error);
       setPlaces([]);
@@ -77,7 +92,11 @@ export default function Home() {
   useEffect(() => {
     if (!userLocation) return;
 
-    getNearByPlace(selectedCategory, userLocation.lat, userLocation.lng);
+    getNearByPlace(
+      selectedCategory,
+      userLocation.lat,
+      userLocation.lng
+    );
   }, [selectedCategory, userLocation]);
 
   return (
@@ -92,15 +111,22 @@ export default function Home() {
             <FavoriteList />
           ) : (
             <>
-              <CategoryList setSelectedCategory={setSelectedCategory} />
+              <CategoryList
+                setSelectedCategory={setSelectedCategory}
+              />
 
-              <BusinessList places={places} loading={loading} />
+              <BusinessList
+                places={places}
+                loading={loading}
+              />
             </>
           )}
         </div>
 
         <div>
-          <h2 className="text-xl font-bold mb-4">Map Area</h2>
+          <h2 className="text-xl font-bold mb-4">
+            Map Area
+          </h2>
 
           <MapGoogle
             userLocation={userLocation}

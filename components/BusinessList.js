@@ -6,7 +6,7 @@ import { useState, useEffect, useContext } from "react";
 import { SelectedBusinessContext } from "../app/context/SelectedBusinessContext";
 import { FavoriteContext } from "../app/context/FavoriteContext";
 
-export default function BusinessList({ places, loading }) {
+export default function BusinessList({ places = [], loading }) {
   const [page, setPage] = useState(0);
 
   const { selectedBusiness, setSelectedBusiness } =
@@ -17,6 +17,7 @@ export default function BusinessList({ places, loading }) {
 
   const pageSize = 5;
 
+  // Reset pagination when search results change
   useEffect(() => {
     setPage(0);
   }, [places]);
@@ -24,12 +25,16 @@ export default function BusinessList({ places, loading }) {
   const start = page * pageSize;
   const visiblePlaces = places.slice(start, start + pageSize);
 
-  const showPrev = page > 0;
-  const showNext = start + pageSize < places.length;
+  const totalPages = Math.ceil(places.length / pageSize);
 
+  const showPrev = page > 0;
+  const showNext = page < totalPages - 1;
+
+  // Check whether a place is already in favorites
   const isFavorite = (place) =>
     favorites.some((item) => item.id === place.id);
 
+  // Show loading skeletons
   if (loading) {
     return (
       <div className="mt-5 space-y-4">
@@ -43,8 +48,13 @@ export default function BusinessList({ places, loading }) {
     );
   }
 
-  if (!places || places.length === 0) {
-    return <p className="mt-5 text-gray-500">No places found</p>;
+  // Show message when no places are found
+  if (!places.length) {
+    return (
+      <p className="mt-5 text-gray-500">
+        No places found
+      </p>
+    );
   }
 
   return (
@@ -71,10 +81,14 @@ export default function BusinessList({ places, loading }) {
             <img
               src={photoUrl}
               alt={place.displayName?.text || "Place"}
+              loading="lazy"
               className="w-20 h-20 shrink-0 rounded-lg object-cover"
               onError={(event) => {
-                event.currentTarget.onerror = null;
-                event.currentTarget.src = "/businessItem.jpg";
+                const fallback = "/businessItem.jpg";
+
+                if (!event.currentTarget.src.endsWith(fallback)) {
+                  event.currentTarget.src = fallback;
+                }
               }}
             />
 
@@ -87,23 +101,26 @@ export default function BusinessList({ places, loading }) {
                 {place.formattedAddress || "Address unavailable"}
               </p>
 
-              {place.rating && (
+              {typeof place.rating === "number" && (
                 <p className="mt-1 text-sm">
                   ⭐ {place.rating}
                   {place.userRatingCount
-                    ? ` (${place.userRatingCount})`
+                    ? ` (${place.userRatingCount} reviews)`
                     : ""}
                 </p>
               )}
             </div>
 
             <button
+              type="button"
               onClick={(event) => {
                 event.stopPropagation();
 
-                favorite
-                  ? removeFavorite(place.id)
-                  : addFavorite(place);
+                if (favorite) {
+                  removeFavorite(place.id);
+                } else {
+                  addFavorite(place);
+                }
               }}
               className="text-xl self-start"
               aria-label={
@@ -118,27 +135,31 @@ export default function BusinessList({ places, loading }) {
         );
       })}
 
-      <div className="flex justify-between items-center pt-3">
-        <button
-          onClick={() => setPage((prev) => prev - 1)}
-          disabled={!showPrev}
-          className="px-4 py-2 rounded-lg border disabled:opacity-30"
-        >
-          Previous
-        </button>
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center pt-3">
+          <button
+            type="button"
+            onClick={() => setPage((prev) => prev - 1)}
+            disabled={!showPrev}
+            className="px-4 py-2 rounded-lg border disabled:opacity-30"
+          >
+            Previous
+          </button>
 
-        <span className="text-sm text-gray-500">
-          Page {page + 1} of {Math.ceil(places.length / pageSize)}
-        </span>
+          <span className="text-sm text-gray-500">
+            Page {page + 1} of {totalPages}
+          </span>
 
-        <button
-          onClick={() => setPage((prev) => prev + 1)}
-          disabled={!showNext}
-          className="px-4 py-2 rounded-lg border disabled:opacity-30"
-        >
-          Next
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setPage((prev) => prev + 1)}
+            disabled={!showNext}
+            className="px-4 py-2 rounded-lg border disabled:opacity-30"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

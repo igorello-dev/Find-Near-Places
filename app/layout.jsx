@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -20,21 +20,17 @@ const geistMono = Geist_Mono({
 });
 
 // Website metadata and application logo
-export const metadata: Metadata = {
+export const metadata = {
   title: "Find Near Place",
   description: "Find places near you",
   icons: {
-    icon: "/Logo.png",
-    shortcut: "/Logo.png",
-    apple: "/Logo.png",
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
@@ -42,7 +38,9 @@ export default function RootLayout({
       >
         <UserLocationProvider>
           <SelectedBusinessProvider>
-            <FavoriteProvider>{children}</FavoriteProvider>
+            <FavoriteProvider>
+              {children}
+            </FavoriteProvider>
           </SelectedBusinessProvider>
         </UserLocationProvider>
       </body>

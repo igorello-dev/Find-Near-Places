@@ -1,81 +1,58 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
-
+import { useState, useEffect, useCallback } from "react";
 import { UserLocationContext } from "./UserLocationContext";
-
 import { getUserLocation } from "../utils/getUserLocation";
 
-// UserLocationProvider is a global storage for user's GPS location
-//
-// It allows any component inside the app to access:
-// - current latitude
-// - current longitude
-//
-// Components using this context:
-// - MapGoogle
-// - UserLocationMarker
-// - PlaceInfoBox
-// - Search nearby places
-
 export default function UserLocationProvider({ children }) {
-  // State that stores user's current GPS coordinates
-  //
-  // Example:
-  // {
-  //    lat: 52.4862,
-  //    lng: -1.8904
-  // }
-
   const [userLocation, setUserLocation] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationError, setLocationError] = useState(null);
 
-  // Get user location when application starts
-  //
-  // This runs only once because of empty dependency array []
+  // Get user's GPS location
+  const updateUserLocation = useCallback(async () => {
+    setLocationLoading(true);
+    setLocationError(null);
 
-  useEffect(() => {
-    // Call browser GPS function
+    try {
+      const coords = await getUserLocation();
 
-    getUserLocation()
-      // If location is successfully received
+      if (
+        !Number.isFinite(coords?.lat) ||
+        !Number.isFinite(coords?.lng) ||
+        coords.lat < -90 ||
+        coords.lat > 90 ||
+        coords.lng < -180 ||
+        coords.lng > 180
+      ) {
+        throw new Error("Invalid GPS coordinates");
+      }
 
-      .then((coords) => {
-        console.log(
-          "USER LOCATION:",
+      console.log("USER LOCATION:", coords);
 
-          coords,
-        );
-
-        // Save coordinates into global state
-
-        setUserLocation(coords);
-      })
-
-      // If user blocks location or GPS fails
-
-      .catch((error) => {
-        console.log(
-          "LOCATION ERROR:",
-
-          error,
-        );
-      });
+      setUserLocation(coords);
+    } catch (error) {
+      console.error("LOCATION ERROR:", error);
+      setLocationError(error.message || "Unable to get your location");
+    } finally {
+      setLocationLoading(false);
+    }
   }, []);
 
+  // Get location when application starts
+  useEffect(() => {
+    updateUserLocation();
+  }, [updateUserLocation]);
+
   return (
-    // Provide location data to all child components
-
-    // inside the application
-
     <UserLocationContext.Provider
       value={{
-        // Current user GPS position
-
         userLocation,
-
-        // Function to update location manually
-
         setUserLocation,
+        locationLoading,
+        locationError,
+        updateUserLocation,
       }}
     >
       {children}

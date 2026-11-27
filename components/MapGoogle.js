@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useContext, useState } from "react";
@@ -13,11 +14,15 @@ import UserLocationMarker from "./Marker";
 
 import { SelectedBusinessContext } from "../app/context/SelectedBusinessContext";
 
-export default function MapGoogle({ userLocation, places, selectedCategory }) {
+export default function MapGoogle({
+  userLocation,
+  places = [],
+  selectedCategory,
+}) {
   const [map, setMap] = useState(null);
 
   const { selectedBusiness, setSelectedBusiness } = useContext(
-    SelectedBusinessContext,
+    SelectedBusinessContext
   );
 
   // Select marker icon
@@ -34,34 +39,42 @@ export default function MapGoogle({ userLocation, places, selectedCategory }) {
     }
   };
 
-  // Get coordinates from Places API (New)
+  // Get coordinates from Google Places API
   const getPlacePosition = (place) => {
+    const latitude = Number(place?.location?.latitude);
+    const longitude = Number(place?.location?.longitude);
+
     if (
-      !place?.location ||
-      place.location.latitude == null ||
-      place.location.longitude == null
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
     ) {
       return null;
     }
 
     return {
-      lat: Number(place.location.latitude),
-      lng: Number(place.location.longitude),
+      lat: latitude,
+      lng: longitude,
     };
   };
 
   // Return to user's location
   const goToMyLocation = () => {
-    if (map && userLocation) {
-      map.panTo(userLocation);
-      map.setZoom(15);
-    }
+    if (!map || !userLocation) return;
+
+    map.panTo(userLocation);
+    map.setZoom(15);
   };
 
   const selectedPosition = getPlacePosition(selectedBusiness);
 
   return (
-    <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_API_KEY}>
+    <LoadScript
+      googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_API_KEY || ""}
+    >
       {userLocation && (
         <div className="relative">
           <GoogleMap
@@ -75,12 +88,15 @@ export default function MapGoogle({ userLocation, places, selectedCategory }) {
             onLoad={(mapInstance) => {
               setMap(mapInstance);
             }}
+            onUnmount={() => {
+              setMap(null);
+            }}
           >
             {/* User GPS location */}
             <UserLocationMarker userLocation={userLocation} />
 
             {/* Nearby places */}
-            {places?.map((place) => {
+            {places.map((place) => {
               const position = getPlacePosition(place);
 
               if (!position) return null;
@@ -114,7 +130,8 @@ export default function MapGoogle({ userLocation, places, selectedCategory }) {
                   </h3>
 
                   <p>
-                    {selectedBusiness.formattedAddress || "Address unavailable"}
+                    {selectedBusiness.formattedAddress ||
+                      "Address unavailable"}
                   </p>
                 </div>
               </InfoWindow>
@@ -123,6 +140,7 @@ export default function MapGoogle({ userLocation, places, selectedCategory }) {
 
           {/* Return to my location button */}
           <button
+            type="button"
             onClick={goToMyLocation}
             className="
               absolute
